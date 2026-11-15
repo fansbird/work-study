@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.StudentMapper">
+
+    <insert id="insert" parameterType="com.workstudy.entity.Student" useGeneratedKeys="true" keyProperty="id">
+        insert into student (user_id, student_no, name, gender, phone, college, major, class_name, grade,
+                             difficulty_level, bank_card, status,
+                             create_time, update_time, create_user, update_user)
+        values (#{userId}, #{studentNo}, #{name}, #{gender}, #{phone}, #{college}, #{major}, #{className}, #{grade},
+                #{difficultyLevel}, #{bankCard}, #{status},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <update id="update" parameterType="com.workstudy.entity.Student">
+        update student
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="studentNo != null">student_no = #{studentNo},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="college != null">college = #{college},</if>
+            <if test="major != null">major = #{major},</if>
+            <if test="className != null">class_name = #{className},</if>
+            <if test="grade != null">grade = #{grade},</if>
+            <if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if>
+            <if test="bankCard != null">bank_card = #{bankCard},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="list" resultType="com.workstudy.entity.Student">
+        select id, user_id, student_no, name, gender, phone, college, major, class_name, grade,
+               difficulty_level, bank_card, status,
+               create_time, update_time, create_user, update_user
+        from student
+        where status = 1
+        order by id asc
+    </select>
+
+    <select id="pageQuery" resultType="com.workstudy.vo.StudentVO">
+        select s.id, s.user_id, s.student_no, s.name, s.gender, s.phone, s.college, s.major,
+               s.class_name, s.grade, s.difficulty_level, s.bank_card, s.status,
+               s.create_time, s.update_time, s.create_user, s.update_user,
+               u.username
+        from student s
+        left join sys_user u on s.user_id = u.id
+        <where>
+            <if test="name != null and name != ''">
+                and s.name like concat('%', #{name}, '%')
+            </if>
+            <if test="studentNo != null and studentNo != ''">
+                and s.student_no like concat('%', #{studentNo}, '%')
+            </if>
+            <if test="college != null and college != ''">
+                and s.college like concat('%', #{college}, '%')
+            </if>
+        </where>
+        order by s.create_time desc, s.id desc
+    </select>
+
+</mapper>

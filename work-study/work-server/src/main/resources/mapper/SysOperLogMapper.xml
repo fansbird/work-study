@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.SysOperLogMapper">
+
+    <insert id="insert" parameterType="com.workstudy.entity.SysOperLog" useGeneratedKeys="true" keyProperty="id">
+        insert into sys_oper_log (title, method, request_method, request_url, request_param,
+                                  oper_user_id, oper_user_name, oper_ip, oper_time, cost_time,
+                                  status, error_msg)
+        values (#{title}, #{method}, #{requestMethod}, #{requestUrl}, #{requestParam},
+                #{operUserId}, #{operUserName}, #{operIp}, #{operTime}, #{costTime},
+                #{status}, #{errorMsg})
+    </insert>
+
+    <select id="pageQuery" resultType="com.workstudy.entity.SysOperLog">
+        select id, title, method, request_method, request_url, request_param,
+               oper_user_id, oper_user_name, oper_ip, oper_time, cost_time, status, error_msg
+        from sys_oper_log
+        <where>
+            <if test="title != null and title != ''">
+                and title like concat('%', #{title}, '%')
+            </if>
+            <if test="operUserName != null and operUserName != ''">
+                and oper_user_name like concat('%', #{operUserName}, '%')
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="begin != null">
+                and oper_time &gt;= #{begin}
+            </if>
+            <if test="end != null">
+                and oper_time &lt;= #{end}
+            </if>
+        </where>
+        order by oper_time desc, id desc
+    </select>
+
+    <select id="getById" resultType="com.workstudy.entity.SysOperLog">
+        select id, title, method, request_method, request_url, request_param,
+               oper_user_id, oper_user_name, oper_ip, oper_time, cost_time, status, error_msg
+        from sys_oper_log
+        where id = #{id}
+    </select>
+
+</mapper>

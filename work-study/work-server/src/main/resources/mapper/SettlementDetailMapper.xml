@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.SettlementDetailMapper">
+
+    <!-- 批量新增结算明细 -->
+    <insert id="insertBatch">
+        insert into settlement_detail (settlement_id, work_hour_id, student_id, position_id, work_date,
+                                       hours, hourly_wage, coefficient, amount, create_time)
+        values
+        <foreach collection="details" item="detail" separator=",">
+            (#{detail.settlementId}, #{detail.workHourId}, #{detail.studentId}, #{detail.positionId},
+             #{detail.workDate}, #{detail.hours}, #{detail.hourlyWage}, #{detail.coefficient},
+             #{detail.amount}, #{detail.createTime})
+        </foreach>
+    </insert>
+
+    <!-- 结算明细列表（含学生姓名/学号、岗位名称） -->
+    <select id="listBySettlementId" resultType="com.workstudy.vo.SettlementDetailVO">
+        select sd.*,
+               s.name as studentName,
+               s.student_no as studentNo,
+               p.name as positionName
+        from settlement_detail sd
+        left join student s on sd.student_id = s.id
+        left join position p on sd.position_id = p.id
+        where sd.settlement_id = #{settlementId}
+        order by sd.student_id asc, sd.work_date asc, sd.id asc
+    </select>
+
+    <!-- 对账汇总：直接读库统计，避免与内存明细「自证」 -->
+    <select id="sumBySettlementId" resultType="java.util.Map">
+        select ifnull(sum(amount), 0) as totalAmount,
+               ifnull(sum(hours), 0)  as totalHours,
+               count(1)               as detailCount
+        from settlement_detail
+        where settlement_id = #{settlementId}
+    </select>
+
+    <!-- 学生数据归属：是否含该学生明细 -->
+    <select id="countBySettlementIdAndStudentId" resultType="int">
+        select count(1)
+        from settlement_detail
+        where settlement_id = #{settlementId}
+          and student_id = #{studentId}
+    </select>
+
+</mapper>

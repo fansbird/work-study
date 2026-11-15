@@ -1,0 +1,86 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    allow-circular-references: true
+  servlet:
+    multipart:
+      #上传文件大小限制
+      max-file-size: 10MB
+      max-request-size: 100MB
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/work_study?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: ${MYSQL_PASSWORD}
+  # Spring Boot 3：Redis 配置从 spring.redis 迁移到 spring.data.redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 1
+
+mybatis:
+  #mapper配置文件
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.workstudy.entity
+  configuration:
+    #开启驼峰命名
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com:
+      workstudy:
+        mapper: debug
+        service: info
+        controller: info
+
+work:
+  jwt:
+    # 设置jwt签名加密时使用的秘钥（jjwt 0.12 要求 HS256 密钥 >= 32 字节）
+    admin-secret-key: workstudy-jwt-secret-key-2026-0123456789
+    # 设置jwt过期时间
+    admin-ttl: 7200000000
+    # 设置前端传递过来的令牌名称
+    admin-token-name: token
+  alioss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    access-key-id: ${Access_Key_Id}
+    access-key-secret: ${Access_Key_Secret}
+    bucket-name: fansbird-sky
+  #工时规则校验阈值（日/周/月上限，单位：小时）
+  check:
+    daily-max-hours: 8
+    weekly-max-hours: 40
+    monthly-max-hours: 160
+
+# ===== 接口文档（Knife4j 4.x / OpenAPI3） =====
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# ===== AI：LangChain4j（Spring Boot 3 starter，配置化，无需手动装配 Bean） =====
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: ${AI_BASE_URL:https://ws-xopj639nseo2qwi3.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+      api-key: ${ALIYUN_API_KEY:sk-placeholder}
+      model-name: ${AI_CHAT_MODEL:deepseek-v4.1-flash-1017}
+      temperature: 0.7
+      log-requests: true
+      log-responses: true
+    streaming-chat-model:
+      base-url: ${AI_BASE_URL:https://ws-xopj639nseo2qwi3.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+      api-key: ${ALIYUN_API_KEY:sk-placeholder}
+      model-name: ${AI_CHAT_MODEL:deepseek-v4.1-flash-1017}
+      log-requests: true
+      log-responses: true

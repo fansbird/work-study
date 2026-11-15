@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.PositionMapper">
+
+    <!-- 岗位VO公共列：部门名称、类别名称（查数据字典，取不到时退化为 category 原值）、剩余名额 -->
+    <sql id="voColumns">
+        p.id, p.name, p.dept_id, p.category, p.semester_id, p.quota, p.hired, p.hourly_wage,
+        p.work_content, p.work_location, p.contact_person, p.contact_phone, p.status,
+        p.reject_reason, p.publish_time, p.create_time, p.update_time, p.create_user, p.update_user,
+        d.name as dept_name,
+        ifnull((select sd.item_text from sys_dict sd
+                where sd.dict_code = 'position_category' and sd.item_value = p.category limit 1),
+               p.category) as category_name,
+        (ifnull(p.quota, 0) - ifnull(p.hired, 0)) as remain_quota
+    </sql>
+
+    <insert id="insert" parameterType="com.workstudy.entity.Position" useGeneratedKeys="true" keyProperty="id">
+        insert into position (name, dept_id, category, semester_id, quota, hired, hourly_wage, work_content,
+                              work_location, contact_person, contact_phone, status, reject_reason, publish_time,
+                              create_time, update_time, create_user, update_user)
+        values (#{name}, #{deptId}, #{category}, #{semesterId}, #{quota}, #{hired}, #{hourlyWage}, #{workContent},
+                #{workLocation}, #{contactPerson}, #{contactPhone}, #{status}, #{rejectReason}, #{publishTime},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <!-- 草稿/驳回的修改：不写 status / hired / publish_time，避免绕过状态机与名额 -->
+    <update id="update" parameterType="com.workstudy.entity.Position">
+        update position
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="semesterId != null">semester_id = #{semesterId},</if>
+            <if test="quota != null">quota = #{quota},</if>
+            <if test="hourlyWage != null">hourly_wage = #{hourlyWage},</if>
+            <if test="workContent != null">work_content = #{workContent},</if>
+            <if test="workLocation != null">work_location = #{workLocation},</if>
+            <if test="contactPerson != null">contact_person = #{contactPerson},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!--
+      状态流转专用：status 与 reject_reason 为显式赋值（可写 null，实现"清空驳回原因"）；
+      publish_time 仅在传入时更新，因此下架（2→4）不会丢失发布时间
+    -->
+    <update id="updateStatus" parameterType="com.workstudy.entity.Position">
+        update position
+        set status = #{status},
+            reject_reason = #{rejectReason},
+            <if test="publishTime != null">publish_time = #{publishTime},</if>
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        delete from position where id = #{id}
+    </delete>
+
+    <select id="getVOById" resultType="com.workstudy.vo.PositionVO">
+        select
+        <include refid="voColumns"/>
+        from position p
+        left join dept d on p.dept_id = d.id
+        where p.id = #{id}
+    </select>
+
+    <select id="pageQuery" resultType="com.workstudy.vo.PositionVO">
+        select
+        <include refid="voColumns"/>
+        from position p
+        left join dept d on p.dept_id = d.id
+        <where>
+            <if test="name != null and name != ''">
+                and p.name like concat('%', #{name}, '%')
+            </if>
+            <if test="deptId != null">
+                and p.dept_id = #{deptId}
+            </if>
+            <if test="category != null and category != ''">
+                and p.category = #{category}
+            </if>
+            <if test="semesterId != null">
+                and p.semester_id = #{semesterId}
+            </if>
+            <if test="status != null">
+                and p.status = #{status}
+            </if>
+        </where>
+        order by p.create_time desc, p.id desc
+    </select>
+
+    <!-- 供学生浏览/下拉：只返回已发布(status=2)的岗位 -->
+    <select id="list" resultType="com.workstudy.vo.PositionVO">
+        select
+        <include refid="voColumns"/>
+        from position p
+        left join dept d on p.dept_id = d.id
+        where p.status = 2
+        <if test="name != null and name != ''">
+            and p.name like concat('%', #{name}, '%')
+        </if>
+        <if test="deptId != null">
+            and p.dept_id = #{deptId}
+        </if>
+        <if test="category != null and category != ''">
+            and p.category = #{category}
+        </if>
+        <if test="semesterId != null">
+            and p.semester_id = #{semesterId}
+        </if>
+        order by p.publish_time desc, p.id desc
+    </select>
+
+</mapper>

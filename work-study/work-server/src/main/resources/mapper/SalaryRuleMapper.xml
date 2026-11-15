@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.SalaryRuleMapper">
+
+    <!-- 新增薪酬规则 -->
+    <insert id="insert" parameterType="com.workstudy.entity.SalaryRule" useGeneratedKeys="true" keyProperty="id">
+        insert into salary_rule (name, semester_id, category, difficulty_level, base_wage, coefficient,
+                                 max_monthly, min_monthly, priority, status,
+                                 create_time, update_time, create_user, update_user)
+        values (#{name}, #{semesterId}, #{category}, #{difficultyLevel}, #{baseWage}, #{coefficient},
+                #{maxMonthly}, #{minMonthly}, #{priority}, #{status},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <!-- 更新薪酬规则：全字段更新，便于把 semester_id/category/max_monthly 等置空 -->
+    <update id="update" parameterType="com.workstudy.entity.SalaryRule">
+        update salary_rule
+        set name = #{name},
+            semester_id = #{semesterId},
+            category = #{category},
+            difficulty_level = #{difficultyLevel},
+            base_wage = #{baseWage},
+            coefficient = #{coefficient},
+            max_monthly = #{maxMonthly},
+            min_monthly = #{minMonthly},
+            priority = #{priority},
+            status = #{status},
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        where id = #{id}
+    </update>
+
+    <!-- 分页查询薪酬规则 -->
+    <select id="pageQuery" resultType="com.workstudy.entity.SalaryRule">
+        select id, name, semester_id, category, difficulty_level, base_wage, coefficient,
+               max_monthly, min_monthly, priority, status,
+               create_time, update_time, create_user, update_user
+        from salary_rule
+        <where>
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="semesterId != null">
+                and (semester_id = #{semesterId} or semester_id is null)
+            </if>
+            <if test="category != null and category != ''">
+                and (category = #{category} or category is null)
+            </if>
+        </where>
+        order by priority asc, id asc
+    </select>
+
+    <!-- 查询启用中的薪酬规则（按 priority 升序，数字小者优先匹配） -->
+    <select id="list" resultType="com.workstudy.entity.SalaryRule">
+        select id, name, semester_id, category, difficulty_level, base_wage, coefficient,
+               max_monthly, min_monthly, priority, status,
+               create_time, update_time, create_user, update_user
+        from salary_rule
+        where status = 1
+        <if test="semesterId != null">
+            and (semester_id = #{semesterId} or semester_id is null)
+        </if>
+        order by priority asc, id asc
+    </select>
+
+</mapper>

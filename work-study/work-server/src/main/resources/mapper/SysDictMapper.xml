@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.SysDictMapper">
+
+    <insert id="insert" parameterType="com.workstudy.entity.SysDict" useGeneratedKeys="true" keyProperty="id">
+        insert into sys_dict (dict_name, dict_code, item_text, item_value, sort, status,
+                              create_time, update_time, create_user, update_user)
+        values (#{dictName}, #{dictCode}, #{itemText}, #{itemValue}, #{sort}, #{status},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <update id="update" parameterType="com.workstudy.entity.SysDict">
+        update sys_dict
+        <set>
+            <if test="dictName != null">dict_name = #{dictName},</if>
+            <if test="dictCode != null">dict_code = #{dictCode},</if>
+            <if test="itemText != null">item_text = #{itemText},</if>
+            <if test="itemValue != null">item_value = #{itemValue},</if>
+            <if test="sort != null">sort = #{sort},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="list" resultType="com.workstudy.entity.SysDict">
+        select id, dict_name, dict_code, item_text, item_value, sort, status,
+               create_time, update_time, create_user, update_user
+        from sys_dict
+        <where>
+            <if test="dictCode != null and dictCode != ''">
+                and dict_code = #{dictCode}
+            </if>
+        </where>
+        order by dict_code asc, sort asc, id asc
+    </select>
+
+</mapper>

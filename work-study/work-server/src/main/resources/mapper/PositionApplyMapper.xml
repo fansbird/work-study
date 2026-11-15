@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.PositionApplyMapper">
+
+    <insert id="insert" parameterType="com.workstudy.entity.PositionApply" useGeneratedKeys="true" keyProperty="id">
+        insert into position_apply (position_id, student_id, semester_id, apply_remark, status, reject_reason,
+                                    audit_time, audit_user,
+                                    create_time, update_time, create_user, update_user)
+        values (#{positionId}, #{studentId}, #{semesterId}, #{applyRemark}, #{status}, #{rejectReason},
+                #{auditTime}, #{auditUser},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <update id="update" parameterType="com.workstudy.entity.PositionApply">
+        update position_apply
+        <set>
+            <if test="positionId != null">position_id = #{positionId},</if>
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="semesterId != null">semester_id = #{semesterId},</if>
+            <if test="applyRemark != null">apply_remark = #{applyRemark},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="auditTime != null">audit_time = #{auditTime},</if>
+            <if test="auditUser != null">audit_user = #{auditUser},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 已撤销/已放弃的记录重新报名：复位为待审核，并清空历史驳回原因与审核信息 -->
+    <update id="resetApply" parameterType="com.workstudy.entity.PositionApply">
+        update position_apply
+        set semester_id = #{semesterId},
+            apply_remark = #{applyRemark},
+            status = #{status},
+            reject_reason = null,
+            audit_time = null,
+            audit_user = null,
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        where id = #{id}
+    </update>
+
+    <!-- 报名VO：关联岗位名称/岗位所属部门id、学生姓名与学号；deptId 由数据归属决定（部门管理员只看本部门） -->
+    <select id="pageQuery" resultType="com.workstudy.vo.PositionApplyVO">
+        select
+        a.id, a.position_id, a.student_id, a.semester_id, a.apply_remark, a.status, a.reject_reason,
+        a.audit_time, a.audit_user, a.create_time, a.update_time, a.create_user, a.update_user,
+        p.name as position_name,
+        p.dept_id as dept_id,
+        s.name as student_name,
+        s.student_no as student_no
+        from position_apply a
+        left join position p on a.position_id = p.id
+        left join student s on a.student_id = s.id
+        <where>
+            <if test="deptId != null">
+                and p.dept_id = #{deptId}
+            </if>
+            <if test="query.positionId != null">
+                and a.position_id = #{query.positionId}
+            </if>
+            <if test="query.semesterId != null">
+                and a.semester_id = #{query.semesterId}
+            </if>
+            <if test="query.status != null">
+                and a.status = #{query.status}
+            </if>
+            <if test="query.studentId != null">
+                and a.student_id = #{query.studentId}
+            </if>
+        </where>
+        order by a.create_time desc, a.id desc
+    </select>
+
+</mapper>

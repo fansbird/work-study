@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.SettlementMapper">
+
+    <!-- 幂等校验：同学期同月份同部门的未作废批次 -->
+    <select id="countByScope" resultType="int">
+        select count(1)
+        from settlement
+        where semester_id = #{semesterId}
+          and month = #{month}
+          and status != 3
+        <if test="deptId != null">
+            and dept_id = #{deptId}
+        </if>
+        <if test="deptId == null">
+            and dept_id is null
+        </if>
+    </select>
+
+    <!-- 批次号前缀计数（生成序号用） -->
+    <select id="countByBatchPrefix" resultType="int">
+        select count(1)
+        from settlement
+        where batch_no like concat(#{prefix}, '%')
+    </select>
+
+    <!-- 新增结算单 -->
+    <insert id="insert" parameterType="com.workstudy.entity.Settlement" useGeneratedKeys="true" keyProperty="id">
+        insert into settlement (batch_no, semester_id, month, dept_id, total_hours, total_amount, detail_count,
+                                status, confirm_user, confirm_time, pay_user, pay_time, remark,
+                                create_time, update_time, create_user, update_user)
+        values (#{batchNo}, #{semesterId}, #{month}, #{deptId}, #{totalHours}, #{totalAmount}, #{detailCount},
+                #{status}, #{confirmUser}, #{confirmTime}, #{payUser}, #{payTime}, #{remark},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <!-- 更新结算单（动态sql：状态推进 / 确认 / 发放 / 调整总额） -->
+    <update id="update" parameterType="com.workstudy.entity.Settlement">
+        update settlement
+        <set>
+            <if test="totalHours != null">total_hours = #{totalHours},</if>
+            <if test="totalAmount != null">total_amount = #{totalAmount},</if>
+            <if test="detailCount != null">detail_count = #{detailCount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="confirmUser != null">confirm_user = #{confirmUser},</if>
+            <if test="confirmTime != null">confirm_time = #{confirmTime},</if>
+            <if test="payUser != null">pay_user = #{payUser},</if>
+            <if test="payTime != null">pay_time = #{payTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 分页查询结算单 -->
+    <select id="pageQuery" resultType="com.workstudy.vo.SettlementVO">
+        select st.*,
+               d.name as deptName,
+               se.name as semesterName
+        from settlement st
+        left join dept d on st.dept_id = d.id
+        left join sys_semester se on st.semester_id = se.id
+        <where>
+            <if test="semesterId != null">
+                and st.semester_id = #{semesterId}
+            </if>
+            <if test="month != null and month != ''">
+                and st.month = #{month}
+            </if>
+            <if test="deptId != null">
+                and st.dept_id = #{deptId}
+            </if>
+            <if test="status != null">
+                and st.status = #{status}
+            </if>
+        </where>
+        order by st.create_time desc, st.id desc
+    </select>
+
+    <!-- 学生视角分页：仅返回明细中包含该学生的结算单 -->
+    <select id="pageQueryForStudent" resultType="com.workstudy.vo.SettlementVO">
+        select st.*,
+               d.name as deptName,
+               se.name as semesterName
+        from settlement st
+        left join dept d on st.dept_id = d.id
+        left join sys_semester se on st.semester_id = se.id
+        where exists (select 1 from settlement_detail sd
+                      where sd.settlement_id = st.id and sd.student_id = #{studentId})
+        <if test="query.semesterId != null">
+            and st.semester_id = #{query.semesterId}
+        </if>
+        <if test="query.month != null and query.month != ''">
+            and st.month = #{query.month}
+        </if>
+        <if test="query.status != null">
+            and st.status = #{query.status}
+        </if>
+        order by st.create_time desc, st.id desc
+    </select>
+
+    <!-- 结算单详情 -->
+    <select id="getVoById" resultType="com.workstudy.vo.SettlementVO">
+        select st.*,
+               d.name as deptName,
+               se.name as semesterName
+        from settlement st
+        left join dept d on st.dept_id = d.id
+        left join sys_semester se on st.semester_id = se.id
+        where st.id = #{id}
+    </select>
+
+    <!-- 可结算工时：status=2（已通过）且 settlement_id 为空 -->
+    <select id="listPendingWorkHours" resultType="com.workstudy.entity.WorkHour">
+        select id, position_id, student_id, dept_id, semester_id, work_date, start_time, end_time,
+               hours, work_content, status, reject_reason,
+               dept_audit_user, dept_audit_time, center_audit_user, center_audit_time, settlement_id,
+               create_time, update_time, create_user, update_user
+        from work_hour
+        where status = 2
+          and settlement_id is null
+          and semester_id = #{semesterId}
+          and work_date &gt;= #{startDate}
+          and work_date &lt;= #{endDate}
+        <if test="deptId != null">
+            and dept_id = #{deptId}
+        </if>
+        order by student_id asc, work_date asc, id asc
+    </select>
+
+    <!-- 回填工时的 settlement_id（结算后锁定） -->
+    <update id="fillSettlementId">
+        update work_hour
+        set settlement_id = #{settlementId}
+        where id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 作废时解绑工时的 settlement_id，便于重新生成结算 -->
+    <update id="clearSettlementIdBySettlementId">
+        update work_hour
+        set settlement_id = null
+        where settlement_id = #{settlementId}
+    </update>
+
+</mapper>

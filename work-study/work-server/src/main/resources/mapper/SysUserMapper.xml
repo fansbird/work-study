@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.SysUserMapper">
+
+    <insert id="insert" parameterType="com.workstudy.entity.SysUser" useGeneratedKeys="true" keyProperty="id">
+        insert into sys_user (username, password, name, role, phone, status, dept_id, student_id, avatar,
+                              create_time, update_time, create_user, update_user)
+        values (#{username}, #{password}, #{name}, #{role}, #{phone}, #{status}, #{deptId}, #{studentId}, #{avatar},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <update id="update" parameterType="com.workstudy.entity.SysUser">
+        update sys_user
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="pageQuery" resultType="com.workstudy.entity.SysUser">
+        select id, username, name, role, phone, status, dept_id, student_id, avatar,
+               create_time, update_time, create_user, update_user
+        from sys_user
+        <where>
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="role != null">
+                and role = #{role}
+            </if>
+        </where>
+        order by create_time desc, id desc
+    </select>
+
+</mapper>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.WorkHourMapper">
+
+    <!-- 新增工时 -->
+    <insert id="insert" parameterType="com.workstudy.entity.WorkHour" useGeneratedKeys="true" keyProperty="id">
+        insert into work_hour (position_id, student_id, dept_id, semester_id, work_date, start_time, end_time,
+                               hours, work_content, status, reject_reason,
+                               dept_audit_user, dept_audit_time, center_audit_user, center_audit_time, settlement_id,
+                               create_time, update_time, create_user, update_user)
+        values (#{positionId}, #{studentId}, #{deptId}, #{semesterId}, #{workDate}, #{startTime}, #{endTime},
+                #{hours}, #{workContent}, #{status}, #{rejectReason},
+                #{deptAuditUser}, #{deptAuditTime}, #{centerAuditUser}, #{centerAuditTime}, #{settlementId},
+                #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <!-- 驳回重填修改（动态sql，不修改状态） -->
+    <update id="update" parameterType="com.workstudy.entity.WorkHour">
+        update work_hour
+        <set>
+            <if test="positionId != null">position_id = #{positionId},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="semesterId != null">semester_id = #{semesterId},</if>
+            <if test="workDate != null">work_date = #{workDate},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="hours != null">hours = #{hours},</if>
+            <if test="workContent != null">work_content = #{workContent},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 审核更新：status/reject_reason 无条件写入（通过时 reject_reason 置空），审核人/审核时间按环节写入 -->
+    <update id="updateAudit" parameterType="com.workstudy.entity.WorkHour">
+        update work_hour
+        <set>
+            status = #{status},
+            reject_reason = #{rejectReason},
+            <if test="deptAuditUser != null">
+                dept_audit_user = #{deptAuditUser},
+                dept_audit_time = #{deptAuditTime},
+            </if>
+            <if test="centerAuditUser != null">
+                center_audit_user = #{centerAuditUser},
+                center_audit_time = #{centerAuditTime},
+            </if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 驳回后重新提交：3 → 0，同时清空驳回原因 -->
+    <update id="submit" parameterType="com.workstudy.entity.WorkHour">
+        update work_hour
+        <set>
+            status = 0,
+            reject_reason = null,
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 时段重叠统计：start < exist.end AND end > exist.start -->
+    <select id="countOverlap" resultType="int">
+        select count(1)
+        from work_hour
+        where student_id = #{studentId}
+          and work_date = #{workDate}
+          and status != 3
+          and start_time &lt; #{endTime}
+          and end_time &gt; #{startTime}
+        <if test="excludeId != null">
+            and id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 日期区间内有效工时合计（status≠3），用于日/周/月上限聚合 -->
+    <select id="sumHours" resultType="java.math.BigDecimal">
+        select ifnull(sum(hours), 0)
+        from work_hour
+        where student_id = #{studentId}
+          and status != 3
+          and work_date &gt;= #{startDate}
+          and work_date &lt;= #{endDate}
+        <if test="excludeId != null">
+            and id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 工时详情（含岗位名称、学生姓名/学号、部门名称） -->
+    <select id="getVoById" resultType="com.workstudy.vo.WorkHourVO">
+        select wh.*,
+               p.name as positionName,
+               s.name as studentName,
+               s.student_no as studentNo,
+               d.name as deptName
+        from work_hour wh
+        left join position p on wh.position_id = p.id
+        left join student s on wh.student_id = s.id
+        left join dept d on wh.dept_id = d.id
+        where wh.id = #{id}
+    </select>
+
+    <!-- 分页查询工时 -->
+    <select id="pageQuery" resultType="com.workstudy.vo.WorkHourVO">
+        select wh.*,
+               p.name as positionName,
+               s.name as studentName,
+               s.student_no as studentNo,
+               d.name as deptName
+        from work_hour wh
+        left join position p on wh.position_id = p.id
+        left join student s on wh.student_id = s.id
+        left join dept d on wh.dept_id = d.id
+        <where>
+            <if test="positionId != null">
+                and wh.position_id = #{positionId}
+            </if>
+            <if test="deptId != null">
+                and wh.dept_id = #{deptId}
+            </if>
+            <if test="semesterId != null">
+                and wh.semester_id = #{semesterId}
+            </if>
+            <if test="status != null">
+                and wh.status = #{status}
+            </if>
+            <if test="studentId != null">
+                and wh.student_id = #{studentId}
+            </if>
+            <if test="startDate != null">
+                and wh.work_date &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                and wh.work_date &lt;= #{endDate}
+            </if>
+        </where>
+        order by wh.work_date desc, wh.id desc
+    </select>
+
+</mapper>

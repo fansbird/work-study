@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.AttachmentMapper">
+
+    <insert id="insert" parameterType="com.workstudy.entity.Attachment" useGeneratedKeys="true" keyProperty="id">
+        insert into attachment (file_name, file_url, file_size, file_type, biz_type, biz_id, upload_user, create_time)
+        values (#{fileName}, #{fileUrl}, #{fileSize}, #{fileType}, #{bizType}, #{bizId}, #{uploadUser}, #{createTime})
+    </insert>
+
+    <select id="list" resultType="com.workstudy.entity.Attachment">
+        select id, file_name, file_url, file_size, file_type, biz_type, biz_id, upload_user, create_time
+        from attachment
+        <where>
+            <if test="bizType != null and bizType != ''">
+                and biz_type = #{bizType}
+            </if>
+            <if test="bizId != null">
+                and biz_id = #{bizId}
+            </if>
+        </where>
+        order by create_time desc, id desc
+    </select>
+
+</mapper>

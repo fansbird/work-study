@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.SettlementAdjustMapper">
+
+    <!-- 新增结算调整记录 -->
+    <insert id="insert" parameterType="com.workstudy.entity.SettlementAdjust" useGeneratedKeys="true" keyProperty="id">
+        insert into settlement_adjust (settlement_id, student_id, adjust_type, amount, reason, create_user, create_time)
+        values (#{settlementId}, #{studentId}, #{adjustType}, #{amount}, #{reason}, #{createUser}, #{createTime})
+    </insert>
+
+</mapper>

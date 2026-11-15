@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.workstudy.mapper.ReportMapper">
+
+    <!-- ==================== 概览 COUNT ==================== -->
+
+    <select id="countPosition" resultType="java.lang.Long">
+        select count(id) from position
+    </select>
+
+    <select id="countPositionByStatus" resultType="java.lang.Long">
+        select count(id) from position where status = #{status}
+    </select>
+
+    <select id="countApply" resultType="java.lang.Long">
+        select count(id) from position_apply
+    </select>
+
+    <select id="countApplyByStatus" resultType="java.lang.Long">
+        select count(id) from position_apply where status = #{status}
+    </select>
+
+    <select id="countStudent" resultType="java.lang.Long">
+        select count(id) from student
+    </select>
+
+    <select id="countDept" resultType="java.lang.Long">
+        select count(id) from dept
+    </select>
+
+    <select id="countWorkHourByStatus" resultType="java.lang.Long">
+        select count(id) from work_hour where status = #{status}
+    </select>
+
+    <select id="countSettlementByStatus" resultType="java.lang.Long">
+        select count(id) from settlement where status = #{status}
+    </select>
+
+    <!-- ==================== 工时口径 SUM（status=2 已通过） ==================== -->
+
+    <select id="sumWorkHourHours" resultType="java.math.BigDecimal">
+        select ifnull(sum(wh.hours), 0)
+        from work_hour wh
+        where wh.work_date between #{begin} and #{end}
+          and wh.status = #{status}
+    </select>
+
+    <select id="sumWorkHourAmount" resultType="java.math.BigDecimal">
+        select ifnull(sum(wh.hours * p.hourly_wage), 0)
+        from work_hour wh
+        left join position p on p.id = wh.position_id
+        where wh.work_date between #{begin} and #{end}
+          and wh.status = #{status}
+    </select>
+
+    <select id="sumWorkHourHoursByDate" resultType="java.math.BigDecimal">
+        select ifnull(sum(hours), 0)
+        from work_hour
+        where work_date = #{date}
+          and status = #{status}
+    </select>
+
+    <!-- ==================== 结算金额口径 SUM（剔除已作废结算单 status=3） ==================== -->
+
+    <select id="sumSettlementAmountByDate" resultType="java.math.BigDecimal">
+        select ifnull(sum(sd.amount), 0)
+        from settlement_detail sd
+        inner join settlement s on s.id = sd.settlement_id
+        where sd.work_date = #{date}
+          and s.status &lt;&gt; 3
+    </select>
+
+    <!-- ==================== 明细统计 ==================== -->
+
+    <select id="positionStats" resultType="com.workstudy.vo.PositionStatsVO">
+        select p.name as position_name,
+               d.name as dept_name,
+               p.quota as quota,
+               p.hired as hired,
+               ifnull(sum(case when wh.status = 2 then wh.hours else 0 end), 0) as hours,
+               ifnull(sum(case when wh.status = 2 then wh.hours * p.hourly_wage else 0 end), 0) as amount
+        from position p
+        left join dept d on d.id = p.dept_id
+        left join work_hour wh on wh.position_id = p.id
+        group by p.id, p.name, d.name, p.quota, p.hired, p.hourly_wage
+        order by hours desc, p.id asc
+    </select>
+
+    <select id="categoryDistribution" resultType="java.util.Map">
+        select ifnull(nullif(p.category, ''), '未分类') as name,
+               count(p.id) as cnt
+        from position p
+        group by ifnull(nullif(p.category, ''), '未分类')
+        order by cnt desc
+    </select>
+
+    <select id="deptSalary" resultType="com.workstudy.vo.DeptSalaryVO">
+        select d.name as dept_name,
+               ifnull(sum(case when wh.status = 2 then wh.hours else 0 end), 0) as hours,
+               ifnull(sum(case when wh.status = 2 then wh.hours * p.hourly_wage else 0 end), 0) as amount
+        from dept d
+        left join work_hour wh on wh.dept_id = d.id
+        left join position p on p.id = wh.position_id
+        group by d.id, d.name
+        order by amount desc, d.id asc
+    </select>
+
+</mapper>
